@@ -6,14 +6,15 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import Image from 'next/image';
 import { ArrowRight, Search } from 'lucide-react';
 
-export default function Home() {
-  // Sample service data - updated for diversity
-  const sampleServices = [
-    { id: "1", title: "Web Development", description: "Build responsive and modern websites.", price: "$500+", image: `https://picsum.photos/seed/1/400/300`, aiHint: "web development coding" },
-    { id: "2", title: "Graphic Design", description: "Create stunning visuals for your brand.", price: "$300+", image: `https://picsum.photos/seed/2/400/300`, aiHint: "graphic design art"},
-    { id: "7", title: "Mobile App UI/UX", description: "Intuitive interfaces for mobile apps.", price: "$1000+", image: `https://picsum.photos/seed/7/400/300`, aiHint: "mobile app design sketch" },
-    { id: "4", title: "Digital Marketing", description: "Boost your online presence.", price: "$700+", image: `https://picsum.photos/seed/4/400/300`, aiHint: "digital marketing chart"},
+
+const sampleServices = [
+    { id: "1", title: "Web Development", description: "Build responsive and modern websites.", price: 50000, image: `https://picsum.photos/seed/1/400/300`, aiHint: "web development coding" },
+    { id: "2", title: "Graphic Design", description: "Create stunning visuals for your brand.", price: 30000, image: `https://picsum.photos/seed/2/400/300`, aiHint: "graphic design art"},
+    { id: "7", title: "Mobile App UI/UX", description: "Intuitive interfaces for mobile apps.", price: 100000, image: `https://picsum.photos/seed/7/400/300`, aiHint: "mobile app design sketch" },
+    { id: "4", title: "Digital Marketing", description: "Boost your online presence.", price: 70000, image: `https://picsum.photos/seed/4/400/300`, aiHint: "digital marketing chart"},
   ];
+
+export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-background to-secondary/10 dark:from-slate-900 dark:to-slate-800/50">
@@ -50,12 +51,12 @@ export default function Home() {
                     <Image
                       src={service.image}
                       alt={service.title}
-                      fill // Use fill instead of layout
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" // Add sizes attribute
-                      style={{ objectFit: 'cover' }} // Replace objectFit with style
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      style={{ objectFit: 'cover' }}
                       className="rounded-t-xl group-hover:scale-105 transition-transform duration-300 ease-in-out"
                       data-ai-hint={service.aiHint}
-                      priority={parseInt(service.id) <= 4} // Prioritize loading images
+                      priority={parseInt(service.id) <= 4}
                     />
                   </div>
                 </CardHeader>
@@ -64,7 +65,7 @@ export default function Home() {
                   <CardDescription className="text-sm leading-relaxed text-muted-foreground">{service.description}</CardDescription>
                 </CardContent>
                 <CardFooter className="flex justify-between items-center p-5 pt-4 border-t bg-secondary/30 dark:bg-secondary/20">
-                  <span className="font-semibold text-accent">{service.price}</span>
+                  <span className="font-semibold text-accent">${(service.price / 100).toFixed(2)}+</span>
                   <Link href={`/services/${service.id}`} passHref>
                      <Button variant="ghost" size="sm" className="text-primary hover:text-accent hover:bg-primary/10 dark:hover:bg-primary/20 rounded-md">
                         View Details <ArrowRight className="ml-1 h-4 w-4" />
@@ -83,7 +84,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Optional: Add How it Works or Testimonials section here */}
+
 
       </main>
       <Footer />
