@@ -1,21 +1,11 @@
 import type {Metadata} from 'next';
-import {Geist, Geist_Mono} from 'next/font/google';
+import {GeistSans} from 'geist/font/sans';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster" // Import Toaster
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'SkillHire', // Updated App Name
-  description: 'Find and offer freelance services', // Updated description
+  title: 'SkillHire',
+  description: 'Find and offer freelance services',
 };
 
 export default function RootLayout({
@@ -24,10 +14,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+    <html lang="en" className={`${GeistSans.variable}`}>
+      <body className={`antialiased font-sans`}>
         {children}
-        <Toaster /> {/* Add Toaster component */}
+        <Toaster />
       </body>
     </html>
   );

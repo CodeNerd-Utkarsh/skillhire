@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
+
 export default function SignupPage() {
   const searchParams = useSearchParams();
   const initialRole = searchParams.get('role') === 'freelancer' ? 'freelancer' : 'client';
@@ -21,13 +22,13 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState(initialRole); // 'client' or 'freelancer'
+  const [role, setRole] = useState<'client' | 'freelancer'>(initialRole);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // Update role state if query param changes after initial load
+
   useEffect(() => {
     const roleParam = searchParams.get('role');
     if (roleParam === 'freelancer' || roleParam === 'client') {
@@ -47,38 +48,19 @@ export default function SignupPage() {
     }
     setIsLoading(true);
 
-    // --- Registration Logic ---
-    // Replace this with your actual registration API call
+
     console.log("Attempting signup with:", { name, email, password, role });
 
     try {
-      // Example using fetch:
-      // const response = await fetch('/api/auth/register', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ name, email, password, role }),
-      // });
-      // const data = await response.json();
 
-      // if (!response.ok) {
-      //   throw new Error(data.message || 'Signup failed');
-      // }
 
-      // --- Mock Success ---
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       toast({
         title: "Signup Successful",
         description: "Welcome to SkillHire! Please check your email to verify your account.",
       });
-      // Redirect to login or email verification page
-      // window.location.href = '/auth/login'; // Or use Next.js router
-      // --- End Mock Success ---
 
-      // Clear form (optional)
-      // setName('');
-      // setEmail('');
-      // setPassword('');
-      // setConfirmPassword('');
+
 
     } catch (error: any) {
       console.error("Signup error:", error);
@@ -180,7 +162,7 @@ export default function SignupPage() {
                  <Label>I want to:</Label>
                  <RadioGroup
                    value={role}
-                   onValueChange={(value) => setRole(value)}
+                   onValueChange={(value) => setRole(value as 'client' | 'freelancer')}
                    className="flex space-x-4"
                    disabled={isLoading}
                  >

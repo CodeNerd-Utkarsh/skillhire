@@ -6,18 +6,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import Link from 'next/link';
 import { Eye, MessageSquare, ShoppingBag, Star } from 'lucide-react';
 
-// Mock data - replace with actual data fetching for the logged-in client
+// TODO: Fetch actual data for the logged-in client
 const mockOrders = [
-  { id: 101, serviceTitle: "Modern Web App Development", freelancer: "Jane Doe", status: "In Progress", dueDate: "2024-08-15", price: 1200 },
-  { id: 102, serviceTitle: "Brand Identity Design", freelancer: "John Smith", status: "Delivered", dueDate: "2024-07-28", price: 800 },
-  { id: 103, serviceTitle: "Technical Article Writing", freelancer: "Alice Green", status: "Completed", dueDate: "2024-07-10", price: 250 },
-  // Add more mock orders
+  { id: 101, serviceTitle: "Modern Web App Development", freelancer: "Jane Doe", status: "In Progress", dueDate: "2024-08-15", price: 120000 }, // Price in cents
+  { id: 102, serviceTitle: "Brand Identity Design", freelancer: "John Smith", status: "Delivered", dueDate: "2024-07-28", price: 80000 },
+  { id: 103, serviceTitle: "Technical Article Writing", freelancer: "Alice Green", status: "Completed", dueDate: "2024-07-10", price: 25000 },
+
 ];
 
 export default function ClientDashboard() {
   return (
     <div className="flex flex-col min-h-screen">
-      <Header /> {/* We might need a specific ClientHeader later */}
+      <Header />
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-primary">Client Dashboard</h1>
@@ -28,7 +28,7 @@ export default function ClientDashboard() {
           </Link>
         </div>
 
-        {/* My Orders List */}
+
         <Card>
           <CardHeader>
             <CardTitle>My Orders</CardTitle>
@@ -54,19 +54,19 @@ export default function ClientDashboard() {
                       <TableCell>{order.freelancer}</TableCell>
                       <TableCell>
                          <span className={`px-2 py-1 rounded-full text-xs ${
-                           order.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                           order.status === 'Delivered' ? 'bg-yellow-100 text-yellow-800' :
-                           order.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                           'bg-gray-100 text-gray-800' // Default/other statuses
+                           order.status === 'In Progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                           order.status === 'Delivered' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                           order.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                           'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
                          }`}>
                            {order.status}
                          </span>
                       </TableCell>
                       <TableCell>{order.dueDate}</TableCell>
-                      <TableCell>${order.price.toFixed(2)}</TableCell>
+                      <TableCell>${(order.price / 100).toFixed(2)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                           {/* Link to Order Detail Page (to be created) */}
+
                           <Link href={`/client/orders/${order.id}`} passHref>
                             <Button variant="ghost" size="icon" title="View Details">
                               <Eye className="h-4 w-4" />
@@ -96,14 +96,14 @@ export default function ClientDashboard() {
           </CardContent>
         </Card>
 
-        {/* Placeholder for Saved Services or Wishlist */}
+
         <Card className="mt-8">
           <CardHeader>
             <CardTitle>Saved Services</CardTitle>
             <CardDescription>Your bookmarked services for later.</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Add saved services list here */}
+
             <p className="text-muted-foreground">You haven't saved any services yet.</p>
           </CardContent>
         </Card>

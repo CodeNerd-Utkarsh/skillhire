@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import Link from 'next/link';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-// import { signIn } from 'next-auth/react'; // Import appropriate auth library function if used
+
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -23,47 +23,23 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    // --- Authentication Logic ---
-    // Replace this with your actual authentication call (e.g., using fetch, axios, or an auth library like NextAuth.js)
+
     console.log("Attempting login with:", { email, password });
 
     try {
-      // Example using fetch:
-      // const response = await fetch('/api/auth/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email, password }),
-      // });
-      // const data = await response.json();
 
-      // if (!response.ok) {
-      //   throw new Error(data.message || 'Login failed');
-      // }
 
-      // // --- Using NextAuth.js ---
-      // const result = await signIn('credentials', { // Use your credential provider name
-      //   redirect: false, // Don't redirect automatically, handle manually
-      //   email,
-      //   password,
-      // });
-
-      // if (result?.error) {
-      //   throw new Error(result.error);
-      // }
-
-      // --- Mock Success ---
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
        if (email === "test@example.com" && password === "password") {
           toast({
             title: "Login Successful",
             description: "Welcome back!",
           });
-          // Redirect to dashboard or homepage after successful login
-          // window.location.href = '/dashboard'; // Or use Next.js router: router.push('/dashboard');
+
        } else {
            throw new Error("Invalid email or password.");
        }
-      // --- End Mock Success ---
+
 
 
     } catch (error: any) {
