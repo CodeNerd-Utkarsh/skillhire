@@ -16,7 +16,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-b from-background to-blue-50 dark:from-slate-900 dark:to-slate-800">
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-background to-secondary/30 dark:from-slate-900 dark:to-slate-800">
       <Header />
       <main className="flex-grow container mx-auto px-4 py-8">
         <section className="text-center py-16 md:py-24">
@@ -66,7 +66,7 @@ export default function Home() {
                 <CardFooter className="flex justify-between items-center p-5 pt-4 border-t bg-secondary/30">
                   <span className="font-semibold text-accent">{service.price}</span>
                   <Link href={`/services/${service.id}`} passHref>
-                    <Button variant="ghost" size="sm" className="text-primary hover:text-accent">
+                    <Button variant="ghost" size="sm" className="text-primary">
                         View Details <ArrowRight className="ml-1 h-4 w-4" />
                     </Button>
                   </Link>
