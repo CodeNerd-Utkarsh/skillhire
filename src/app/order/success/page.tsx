@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Header } from '@/components/layout/header';
@@ -8,16 +8,21 @@ import { Footer } from '@/components/layout/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Loader2 } from 'lucide-react';
-import { getStripeCheckoutSession } from '@/services/stripe'; // Assuming this exists
+import { getStripeCheckoutSession } from '@/services/stripe';
+import { verifyRazorpaySignature } from '@/services/razorpay';
 import { useToast } from '@/hooks/use-toast';
-// import { verifyRazorpayPayment } from '@/services/razorpay'; // You'll need a server action/API for this
+import type { UserPayload } from '@/lib/auth';
 
-export default function OrderSuccessPage() {
+interface OrderSuccessPageProps {
+  user: UserPayload | null;
+}
+
+function SuccessContent({ user }: { user: UserPayload | null }) {
     const searchParams = useSearchParams();
     const stripeSessionId = searchParams.get('session_id');
     const razorpayPaymentId = searchParams.get('payment_id');
     const razorpayOrderId = searchParams.get('order_id');
-    // const razorpaySignature = searchParams.get('razorpay_signature'); // Not typically sent via redirect
+    const razorpaySignature = searchParams.get('razorpay_signature');
 
     const [isLoading, setIsLoading] = useState(true);
     const [status, setStatus] = useState<'success' | 'pending' | 'error'>('pending');
@@ -31,44 +36,54 @@ export default function OrderSuccessPage() {
 
             try {
                 if (stripeSessionId) {
-                    // Verify Stripe Session
                     console.log("Verifying Stripe session:", stripeSessionId);
                     const session = await getStripeCheckoutSession(stripeSessionId);
-                    if (session && session.payment_status === 'paid') {
+                    if (session?.payment_status === 'paid') {
                         console.log("Stripe session status: paid");
                         setStatus('success');
                         toast({
                             title: "Payment Successful",
                             description: "Your order is being processed.",
                         });
+
                     } else if (session) {
                          console.log("Stripe session status:", session.payment_status);
-                         setStatus('pending'); // Or handle other statuses like 'unpaid'
+                         setStatus('pending');
                          setErrorMessage("Payment is still processing or requires action.");
                          toast({
                             title: "Payment Pending",
-                            description: "Your payment is processing. We'll update you soon.",
+                            description: "Your payment is processing. We'll update you via webhook.",
                             variant: "default",
                          });
-                    }
-                     else {
+                    } else {
                         throw new Error('Invalid Stripe session ID or session not found.');
                     }
-                } else if (razorpayPaymentId && razorpayOrderId) {
-                    // Verify Razorpay Payment (SERVER-SIDE verification is more secure via webhooks)
-                    // This client-side check is basic and less reliable.
-                    console.log("Razorpay payment detected (client-side):", razorpayPaymentId);
-                     // Assume success based on redirect for now, webhook should confirm
-                    setStatus('success');
-                    toast({
-                        title: "Payment Successful",
-                        description: "Your order is being processed.",
-                    });
-                    // TODO: Ideally, call a server action/API route here to verify the Razorpay signature securely
-                    // const isValid = await verifyRazorpayPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature);
-                    // if (isValid) { setStatus('success'); } else { throw new Error('Invalid Razorpay payment.'); }
+                } else if (razorpayPaymentId && razorpayOrderId && razorpaySignature) {
 
-                } else {
+                    console.log("Verifying Razorpay payment:", razorpayPaymentId);
+                    const isValid = await verifyRazorpaySignature(razorpayOrderId, razorpayPaymentId, razorpaySignature);
+
+                    if (isValid) {
+                         setStatus('success');
+                         toast({
+                             title: "Payment Successful",
+                             description: "Your order is being processed.",
+                         });
+
+                    } else {
+                         throw new Error('Invalid Razorpay payment signature.');
+                    }
+
+                } else if (razorpayPaymentId && razorpayOrderId) {
+
+                     console.log("Razorpay payment detected (no signature):", razorpayPaymentId);
+                     setStatus('pending');
+                     toast({
+                         title: "Payment Processing",
+                         description: "We received your payment ID. Waiting for final confirmation.",
+                     });
+                }
+                else {
                     throw new Error('No valid payment information found in URL.');
                 }
             } catch (error: any) {
@@ -86,12 +101,10 @@ export default function OrderSuccessPage() {
         };
 
         verifyPayment();
-    }, [stripeSessionId, razorpayPaymentId, razorpayOrderId, toast]);
+    }, [stripeSessionId, razorpayPaymentId, razorpayOrderId, razorpaySignature, toast]);
 
     return (
-        <div className="flex flex-col min-h-screen">
-            <Header />
-            <main className="flex-grow flex items-center justify-center px-4 py-12 bg-gradient-to-br from-background to-secondary/10">
+         <main className="flex-grow flex items-center justify-center px-4 py-12 bg-gradient-to-br from-background to-secondary/10">
                 <Card className="w-full max-w-md shadow-xl">
                     <CardHeader className="text-center">
                         {isLoading && <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary mb-4" />}
@@ -101,26 +114,26 @@ export default function OrderSuccessPage() {
                         <CardTitle className="text-2xl font-bold">
                             {isLoading ? "Verifying Payment..." :
                              status === 'success' ? "Payment Successful!" :
-                             status === 'pending' ? "Payment Pending" :
+                             status === 'pending' ? "Payment Processing" :
                              "Payment Verification Failed"}
                         </CardTitle>
                         <CardDescription>
                             {isLoading ? "Please wait while we confirm your payment." :
-                             status === 'success' ? "Thank you for your order. You will receive confirmation shortly." :
-                             status === 'pending' ? "Your payment is currently being processed. This might take a few moments." :
+                             status === 'success' ? "Thank you for your order! You can track its progress in your dashboard." :
+                             status === 'pending' ? "Your payment is processing. We'll update the order status once confirmed via webhook." :
                              errorMessage || "An error occurred while verifying your payment."}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="text-center">
-                        {/* Display order summary or details here if needed */}
+
                         {!isLoading && status === 'success' && (
                             <p className="text-sm text-muted-foreground mb-4">
-                                Your order is now being processed. You can view its status in your dashboard.
+                                Your order status will be updated shortly.
                             </p>
                         )}
                          {!isLoading && status === 'pending' && (
                             <p className="text-sm text-muted-foreground mb-4">
-                                Please wait a few moments or check your email for confirmation. If the issue persists, contact support.
+                                Please check your dashboard later for the order status update. If the issue persists, contact support.
                             </p>
                         )}
                         {!isLoading && status === 'error' && (
@@ -129,9 +142,11 @@ export default function OrderSuccessPage() {
                             </p>
                         )}
                         <div className="mt-6 flex justify-center gap-4">
-                            <Link href="/client/dashboard" passHref>
-                                <Button variant="default">Go to Dashboard</Button>
-                            </Link>
+                            {user && user.role === 'client' && (
+                                <Link href="/client/dashboard" passHref>
+                                    <Button variant="default">Go to Dashboard</Button>
+                                </Link>
+                            )}
                              <Link href="/services" passHref>
                                 <Button variant="outline">Browse More Services</Button>
                             </Link>
@@ -139,7 +154,20 @@ export default function OrderSuccessPage() {
                     </CardContent>
                 </Card>
             </main>
+    );
+}
+
+
+export default function OrderSuccessPage({ user }: OrderSuccessPageProps) {
+    return (
+        <div className="flex flex-col min-h-screen">
+            <Header user={user} />
+            <Suspense fallback={<Loader2 className="h-16 w-16 animate-spin text-primary mx-auto my-auto" />}>
+                 <SuccessContent user={user} />
+            </Suspense>
             <Footer />
         </div>
     );
 }
+
+

@@ -1,19 +1,19 @@
 import { DataTypes, Model, Optional, BelongsToGetAssociationMixin, ForeignKey } from 'sequelize';
 import { sequelize } from '@/lib/db';
-import type { User } from './user'; // Import type for association
-import type { Order } from './order'; // Import type for association
+import type { User } from './user';
+import type { Order } from './order';
 
 interface ServiceAttributes {
-  id: string; // Use UUID or keep as string if using custom IDs
+  id: string;
   title: string;
   description: string;
   category: string;
-  price: number; // Use INTEGER or DECIMAL based on precision needs
-  deliveryTime: number; // In days
+  price: number;
+  deliveryTime: number;
   revisions: number;
-  imageUrl: string | null; // Path or URL to the image
+  imageUrl: string | null;
   status: 'active' | 'paused' | 'draft';
-  freelancerId: ForeignKey<User['id']>; // Foreign key referencing User model
+  freelancerId: ForeignKey<User['id']>;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -35,9 +35,9 @@ export class Service extends Model<ServiceAttributes, ServiceCreationAttributes>
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
-  // Define associations here after initialization
-  public getFreelancer!: BelongsToGetAssociationMixin<User>; // Method provided by belongsTo
-  public readonly freelancer?: User; // Populated when using include
+
+  public getFreelancer!: BelongsToGetAssociationMixin<User>;
+  public readonly freelancer?: User;
   public readonly orders?: Order[];
 }
 
@@ -49,7 +49,7 @@ Service.init(
       primaryKey: true,
     },
     title: {
-      type: DataTypes.STRING(80), // Add length limit if needed
+      type: DataTypes.STRING(80),
       allowNull: false,
     },
     description: {
@@ -61,19 +61,19 @@ Service.init(
       allowNull: false,
     },
     price: {
-      // Consider DECIMAL(10, 2) for monetary values
-      // type: DataTypes.DECIMAL(10, 2),
-      type: DataTypes.INTEGER, // Using integer cents to avoid floating point issues
+
+
+      type: DataTypes.INTEGER,
       allowNull: false,
       validate: {
-        min: 500, // Minimum price in cents ($5.00)
+        min: 500,
       },
     },
     deliveryTime: {
       type: DataTypes.INTEGER,
       allowNull: false,
       validate: {
-        min: 1, // Minimum 1 day
+        min: 1,
       },
     },
     revisions: {
@@ -88,7 +88,7 @@ Service.init(
       type: DataTypes.STRING,
       allowNull: true,
       validate: {
-        isUrl: true, // Or use a custom validator for paths
+        isUrl: true,
       },
     },
     status: {
@@ -96,7 +96,7 @@ Service.init(
       allowNull: false,
       defaultValue: 'draft',
     },
-    // freelancerId defined automatically by belongsTo association below
+
   },
   {
     sequelize,

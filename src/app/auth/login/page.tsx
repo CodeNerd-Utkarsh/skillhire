@@ -10,53 +10,55 @@ import { Label } from "@/components/ui/label";
 import Link from 'next/link';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { loginUser } from '@/app/auth/actions';
+import { useRouter } from 'next/navigation';
+import { UserPayload } from '@/lib/auth';
 
+interface LoginPageProps {
+    user: UserPayload | null;
+}
 
-export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+export default function LoginPage({ user }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (formData: FormData) => {
     setIsLoading(true);
 
+    const result = await loginUser(formData);
 
-    console.log("Attempting login with:", { email, password });
+    setIsLoading(false);
 
-    try {
-
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-       if (email === "test@example.com" && password === "password") {
-          toast({
-            title: "Login Successful",
-            description: "Welcome back!",
-          });
-
-       } else {
-           throw new Error("Invalid email or password.");
-       }
-
-
-
-    } catch (error: any) {
-      console.error("Login error:", error);
+    if (result.error) {
+      console.error("Login error:", result.error, result.details);
       toast({
         title: "Login Failed",
-        description: error.message || "An unexpected error occurred. Please try again.",
+        description: result.error || "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
+    } else if (result.success) {
+      toast({
+        title: "Login Successful",
+        description: "Welcome back!",
+      });
+
+
+      if (result.role === 'freelancer') {
+        router.push('/freelancer/dashboard');
+      } else {
+        router.push('/client/dashboard');
+      }
+       router.refresh();
     }
   };
 
+
+
   return (
     <div className="flex flex-col min-h-screen">
-      <Header />
+      <Header user={user} />
       <main className="flex-grow flex items-center justify-center px-4 py-12 bg-gradient-to-br from-background to-secondary/30">
         <Card className="w-full max-w-md shadow-xl">
           <CardHeader className="text-center">
@@ -64,16 +66,15 @@ export default function LoginPage() {
             <CardDescription>Sign in to continue to SkillHire</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form action={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   placeholder="you@example.com"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}
                 />
               </div>
@@ -82,11 +83,10 @@ export default function LoginPage() {
                 <div className="relative">
                   <Input
                     id="password"
+                    name="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
                     className="pr-10"
                   />
@@ -100,13 +100,12 @@ export default function LoginPage() {
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
+
                 <div className="text-right">
-                  <Link href="/auth/forgot-password" passHref>
-                    <span className="text-sm text-primary hover:underline cursor-pointer">Forgot password?</span>
-                  </Link>
+
                 </div>
               </div>
-              <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90" disabled={isLoading}>
+              <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isLoading}>
                 {isLoading ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
                 ) : (
@@ -130,3 +129,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+

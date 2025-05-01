@@ -1,19 +1,19 @@
 import { DataTypes, Model, Optional, BelongsToGetAssociationMixin, ForeignKey } from 'sequelize';
 import { sequelize } from '@/lib/db';
-import type { Order } from './order'; // Import Order type
+import type { Order } from './order';
 
 type PaymentProvider = 'stripe' | 'razorpay';
 type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'requires_action' | 'refunded';
 
 interface PaymentAttributes {
-  id: string; // Use UUID
+  id: string;
   orderId: ForeignKey<Order['id']>;
   provider: PaymentProvider;
-  providerPaymentId: string; // e.g., Stripe Charge ID or Razorpay Payment ID
-  amount: number; // Amount in cents
-  currency: string; // e.g., 'usd', 'inr'
+  providerPaymentId: string;
+  amount: number;
+  currency: string;
   status: PaymentStatus;
-  metadata: object | null; // Store additional provider-specific data
+  metadata: object | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -33,7 +33,7 @@ export class Payment extends Model<PaymentAttributes, PaymentCreationAttributes>
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
-  // Associations
+
   public getOrder!: BelongsToGetAssociationMixin<Order>;
   public readonly order?: Order;
 }
@@ -45,7 +45,7 @@ Payment.init(
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
-    // orderId defined by association
+
     provider: {
       type: DataTypes.ENUM('stripe', 'razorpay'),
       allowNull: false,
@@ -53,14 +53,14 @@ Payment.init(
     providerPaymentId: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true, // Ensure uniqueness per provider
+      unique: true,
     },
     amount: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
     currency: {
-      type: DataTypes.STRING(3), // ISO currency code
+      type: DataTypes.STRING(3),
       allowNull: false,
     },
     status: {
@@ -69,7 +69,7 @@ Payment.init(
       defaultValue: 'pending',
     },
     metadata: {
-      type: DataTypes.JSONB, // Use JSONB for better querying in PostgreSQL
+      type: DataTypes.JSONB,
       allowNull: true,
     },
   },

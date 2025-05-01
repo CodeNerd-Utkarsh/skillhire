@@ -1,13 +1,13 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { handleStripeWebhook } from '@/services/stripe'; // Adjust path as necessary
+import { handleStripeWebhook } from '@/services/stripe';
 
 export async function POST(request: NextRequest) {
   const signature = headers().get('stripe-signature');
   let body: Buffer;
 
   try {
-    // Read the raw body which is crucial for signature verification
+
     body = await request.arrayBuffer().then(buffer => Buffer.from(buffer));
   } catch (error: any) {
     console.error('Error reading Stripe webhook request body:', error);
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     if (result.error) {
       console.error(`Stripe Webhook Handler Error: ${result.error}`);
-      // Return 400 for signature errors, 500 for processing errors
+
       const status = result.error.toLowerCase().includes('signature') ? 400 : 500;
       return NextResponse.json({ error: result.error }, { status });
     }

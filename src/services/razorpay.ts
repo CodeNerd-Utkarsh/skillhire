@@ -25,15 +25,7 @@ const razorpayInstance = razorpayKeyId && razorpayKeySecret ? new Razorpay({
 }) : null;
 
 
-/**
- * Creates a Razorpay order.
- *
- * @param dbOrderId - The ID of the order in your database.
- * @param amount - The amount in the smallest currency unit (e.g., paise for INR).
- * @param currency - The currency code (defaults to 'INR').
- * @returns The created Razorpay order object.
- * @throws Error if Razorpay is not configured or the API call fails.
- */
+
 export async function createRazorpayOrder(dbOrderId: string, amount: number, currency: string = 'INR'): Promise<Razorpay.Order> {
   if (!razorpayInstance) {
     throw new Error('Razorpay is not configured. Missing API keys.');
@@ -58,14 +50,7 @@ export async function createRazorpayOrder(dbOrderId: string, amount: number, cur
   }
 }
 
-/**
- * Verifies a Razorpay payment signature (used client-side typically after redirect, less secure than webhooks).
- * This function MUST be async because the 'use server' directive marks all exports as Server Actions.
- * @param razorpayOrderId - The order ID from Razorpay.
- * @param razorpayPaymentId - The payment ID from Razorpay.
- * @param razorpaySignature - The signature received from Razorpay.
- * @returns True if the signature is valid, false otherwise.
- */
+
 export async function verifyRazorpaySignature(
     razorpayOrderId: string,
     razorpayPaymentId: string,
@@ -89,13 +74,7 @@ export async function verifyRazorpaySignature(
 }
 
 
-/**
- * Handles Razorpay webhook events (e.g., payment success, failure).
- * Needs to be exposed via an API route (e.g., /api/webhooks/razorpay).
- * @param body - The parsed JSON body from the webhook request.
- * @param signature - The 'x-razorpay-signature' header value.
- * @returns Object indicating success or failure and appropriate status code.
- */
+
 export async function handleRazorpayWebhook(body: any, signature: string | undefined | string[]) {
    if (!razorpayInstance || !razorpayWebhookSecret) {
     console.error('Cannot handle Razorpay webhook: Razorpay not configured or webhook secret missing.');
@@ -107,7 +86,7 @@ export async function handleRazorpayWebhook(body: any, signature: string | undef
   }
 
 
-  // 1. Verify the webhook signature (IMPORTANT for security)
+
    const isValid = Razorpay.utils.validateWebhookSignature(
       JSON.stringify(body),
       signature,
@@ -132,7 +111,7 @@ export async function handleRazorpayWebhook(body: any, signature: string | undef
     console.log(`Received Razorpay webhook event: ${event}`);
 
 
-    // 2. Process the event
+
     const transaction = await sequelize.transaction();
     try {
         let dbOrder: DbOrder | null = null;

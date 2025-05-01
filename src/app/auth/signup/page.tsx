@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Button } from "@/components/ui/button";
@@ -12,20 +12,25 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Link from 'next/link';
 import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { signupUser } from '@/app/auth/actions';
+import { UserPayload } from '@/lib/auth';
+
+interface SignupPageProps {
+  user: UserPayload | null;
+}
 
 
-export default function SignupPage() {
+export default function SignupPage({ user }: SignupPageProps) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialRole = searchParams.get('role') === 'freelancer' ? 'freelancer' : 'client';
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<'client' | 'freelancer'>(initialRole);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const { toast } = useToast();
 
 
@@ -36,47 +41,42 @@ export default function SignupPage() {
     }
   }, [searchParams]);
 
+  const handleSignup = async (formData: FormData) => {
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password !== confirmPassword) {
+     if (password !== confirmPassword) {
       toast({
         title: "Passwords do not match",
         variant: "destructive",
       });
       return;
     }
+
     setIsLoading(true);
+    formData.set('role', role);
 
+    const result = await signupUser(formData);
 
-    console.log("Attempting signup with:", { name, email, password, role });
+    setIsLoading(false);
 
-    try {
-
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast({
-        title: "Signup Successful",
-        description: "Welcome to SkillHire! Please check your email to verify your account.",
-      });
-
-
-
-    } catch (error: any) {
-      console.error("Signup error:", error);
+    if (result.error) {
+      console.error("Signup error:", result.error, result.details);
       toast({
         title: "Signup Failed",
-        description: error.message || "An unexpected error occurred. Please try again.",
+        description: result.error || "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
+    } else if (result.success) {
+      toast({
+        title: "Signup Successful",
+        description: "Welcome to SkillHire! Please login to continue.",
+      });
+      router.push('/auth/login');
     }
   };
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header />
+      <Header user={user} />
       <main className="flex-grow flex items-center justify-center px-4 py-12 bg-gradient-to-br from-background to-secondary/30">
         <Card className="w-full max-w-lg shadow-xl">
           <CardHeader className="text-center">
@@ -84,15 +84,14 @@ export default function SignupPage() {
             <CardDescription>Join SkillHire as a client or freelancer</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSignup} className="space-y-4">
+            <form action={handleSignup} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
                 <Input
                   id="name"
+                  name="name"
                   placeholder="John Doe"
                   required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
                   disabled={isLoading}
                 />
               </div>
@@ -100,11 +99,10 @@ export default function SignupPage() {
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   placeholder="you@example.com"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}
                 />
               </div>
@@ -113,6 +111,7 @@ export default function SignupPage() {
                  <div className="relative">
                     <Input
                       id="password"
+                      name="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="•••••••• (min. 8 characters)"
                       required
@@ -158,6 +157,7 @@ export default function SignupPage() {
                    </button>
                  </div>
               </div>
+
                <div className="space-y-2">
                  <Label>I want to:</Label>
                  <RadioGroup
@@ -176,7 +176,7 @@ export default function SignupPage() {
                    </div>
                  </RadioGroup>
                </div>
-              <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90" disabled={isLoading}>
+              <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={isLoading}>
                  {isLoading ? (
                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
                  ) : (
@@ -200,3 +200,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+

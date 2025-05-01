@@ -2,17 +2,17 @@ import { DataTypes, Model, Optional, BelongsToGetAssociationMixin, ForeignKey } 
 import { sequelize } from '@/lib/db';
 import type { User } from './user';
 import type { Service } from './service';
-import type { Payment } from './payment'; // Import Payment type
+import type { Payment } from './payment';
 
 interface OrderAttributes {
-  id: string; // Use UUID or keep as string if using custom IDs
+  id: string;
   clientId: ForeignKey<User['id']>;
   freelancerId: ForeignKey<User['id']>;
   serviceId: ForeignKey<Service['id']>;
   status: 'pending' | 'in_progress' | 'delivered' | 'completed' | 'cancelled' | 'disputed';
   dueDate: Date | null;
-  totalAmount: number; // In cents
-  requirements: string | null; // Client requirements provided at purchase
+  totalAmount: number;
+  requirements: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -32,14 +32,14 @@ export class Order extends Model<OrderAttributes, OrderCreationAttributes> imple
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
-  // Associations defined after init
+
   public getClient!: BelongsToGetAssociationMixin<User>;
   public readonly client?: User;
   public getFreelancer!: BelongsToGetAssociationMixin<User>;
   public readonly freelancer?: User;
   public getService!: BelongsToGetAssociationMixin<Service>;
   public readonly service?: Service;
-  public readonly payment?: Payment; // HasOne association with Payment
+  public readonly payment?: Payment;
 }
 
 Order.init(
@@ -49,7 +49,7 @@ Order.init(
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
-    // clientId, freelancerId, serviceId defined by associations
+
     status: {
       type: DataTypes.ENUM('pending', 'in_progress', 'delivered', 'completed', 'cancelled', 'disputed'),
       allowNull: false,
@@ -57,10 +57,10 @@ Order.init(
     },
     dueDate: {
       type: DataTypes.DATE,
-      allowNull: true, // Can be set after order confirmation/start
+      allowNull: true,
     },
     totalAmount: {
-      // Store amount in cents to avoid floating point issues
+
       type: DataTypes.INTEGER,
       allowNull: false,
     },

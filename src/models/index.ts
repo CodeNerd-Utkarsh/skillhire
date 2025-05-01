@@ -4,39 +4,38 @@ import { Order } from './order';
 import { Payment } from './payment';
 import { sequelize } from '@/lib/db';
 
-// --- Define Associations ---
 
-// User <-> Service (One-to-Many: Freelancer has many Services)
+
 User.hasMany(Service, {
   foreignKey: { name: 'freelancerId', allowNull: false },
-  as: 'services', // Alias for accessing services from user instance
+  as: 'services',
 });
 Service.belongsTo(User, {
   foreignKey: { name: 'freelancerId', allowNull: false },
-  as: 'freelancer', // Alias for accessing freelancer from service instance
+  as: 'freelancer',
 });
 
-// User <-> Order (One-to-Many: Client places many Orders)
+
 User.hasMany(Order, {
   foreignKey: { name: 'clientId', allowNull: false },
-  as: 'clientOrders', // Alias for client's orders
+  as: 'clientOrders',
 });
 Order.belongsTo(User, {
   foreignKey: { name: 'clientId', allowNull: false },
   as: 'client',
 });
 
-// User <-> Order (One-to-Many: Freelancer has many Orders)
+
 User.hasMany(Order, {
   foreignKey: { name: 'freelancerId', allowNull: false },
-  as: 'freelancerOrders', // Alias for freelancer's orders
+  as: 'freelancerOrders',
 });
 Order.belongsTo(User, {
   foreignKey: { name: 'freelancerId', allowNull: false },
   as: 'freelancer',
 });
 
-// Service <-> Order (One-to-Many: Service can be part of many Orders)
+
 Service.hasMany(Order, {
   foreignKey: { name: 'serviceId', allowNull: false },
   as: 'orders',
@@ -46,7 +45,7 @@ Order.belongsTo(Service, {
   as: 'service',
 });
 
-// Order <-> Payment (One-to-One: Order has one Payment)
+
 Order.hasOne(Payment, {
   foreignKey: { name: 'orderId', allowNull: false, unique: true },
   as: 'payment',
@@ -57,12 +56,11 @@ Payment.belongsTo(Order, {
 });
 
 
-// Function to sync models with the database
-// Use with caution in production, consider migrations instead
+
 export async function syncModels() {
   try {
-    // await sequelize.sync({ alter: true }); // Use alter: true for non-destructive updates
-    await sequelize.sync({ force: process.env.NODE_ENV === 'development' }); // force: true drops tables - USE ONLY IN DEV
+
+    await sequelize.sync({ force: process.env.NODE_ENV === 'development' });
     console.log('All models were synchronized successfully.');
   } catch (error) {
     console.error('Unable to synchronize the database models:', error);
@@ -70,5 +68,5 @@ export async function syncModels() {
   }
 }
 
-// Re-export models for easier imports
+
 export { User, Service, Order, Payment };
