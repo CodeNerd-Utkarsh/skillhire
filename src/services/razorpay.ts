@@ -1,16 +1,22 @@
 'use server';
 
 import Razorpay from 'razorpay';
-import { randomUUID } from 'crypto'; // For generating unique receipt IDs
-import { Order as DbOrder, Payment } from '@/models'; // Import Sequelize models
-import { sequelize } from '@/lib/db'; // Import Sequelize instance
+import { randomUUID } from 'crypto';
+import { Order as DbOrder, Payment } from '@/models';
+import { sequelize } from '@/lib/db';
+import crypto from 'crypto';
 
 const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
 const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002'; // For webhook verification and redirects
+const razorpayWebhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
+
 
 if (!razorpayKeyId || !razorpayKeySecret) {
   console.warn('Razorpay environment variables (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET) are not fully set. Razorpay functionality will be limited.');
+}
+if (!razorpayWebhookSecret) {
+    console.warn('Razorpay environment variable (RAZORPAY_WEBHOOK_SECRET) is not set. Webhook verification will be skipped (INSECURE!).');
 }
 
 const razorpayInstance = razorpayKeyId && razorpayKeySecret ? new Razorpay({
@@ -24,9 +30,9 @@ const razorpayInstance = razorpayKeyId && razorpayKeySecret ? new Razorpay({
  *
  * @param dbOrderId - The ID of the order in your database.
  * @param amount - The amount in the smallest currency unit (e.g., paise for INR).
- * @param currency - The currency code (e.g., 'INR').
- * @returns The Razorpay order details.
- * @throws Error if Razorpay instance is not available or API call fails.
+ * @param currency - The currency code (defaults to 'INR').
+ * @returns The created Razorpay order object.
+ * @throws Error if Razorpay is not configured or the API call fails.
  */
 export async function createRazorpayOrder(dbOrderId: string, amount: number, currency: string = 'INR'): Promise<Razorpay.Order> {
   if (!razorpayInstance) {
@@ -34,11 +40,11 @@ export async function createRazorpayOrder(dbOrderId: string, amount: number, cur
   }
 
   const options = {
-    amount: amount, // Amount in paise
+    amount: amount,
     currency: currency,
-    receipt: `receipt_order_${randomUUID()}`, // Unique receipt ID
+    receipt: `receipt_order_${randomUUID()}`,
     notes: {
-        databaseOrderId: dbOrderId, // Link to your DB order
+        databaseOrderId: dbOrderId,
     }
   };
 
@@ -53,29 +59,29 @@ export async function createRazorpayOrder(dbOrderId: string, amount: number, cur
 }
 
 /**
- * Verifies a Razorpay payment signature.
- *
- * @param razorpayOrderId - The Razorpay Order ID.
- * @param razorpayPaymentId - The Razorpay Payment ID.
+ * Verifies a Razorpay payment signature (used client-side typically after redirect, less secure than webhooks).
+ * This function MUST be async because the 'use server' directive marks all exports as Server Actions.
+ * @param razorpayOrderId - The order ID from Razorpay.
+ * @param razorpayPaymentId - The payment ID from Razorpay.
  * @param razorpaySignature - The signature received from Razorpay.
  * @returns True if the signature is valid, false otherwise.
  */
-export function verifyRazorpaySignature(
+export async function verifyRazorpaySignature(
     razorpayOrderId: string,
     razorpayPaymentId: string,
     razorpaySignature: string
-): boolean {
-    if (!razorpayInstance || !razorpayKeySecret) {
-        console.error('Cannot verify Razorpay signature: Razorpay not configured.');
-        return false;
-    }
+): Promise<boolean> {
+     if (!razorpayKeySecret) {
+         console.error('Cannot verify Razorpay signature: Razorpay Key Secret not configured.');
+         return false;
+     }
     try {
-        // The SDK handles the crypto generation and comparison
-        return Razorpay.utils.validateWebhookSignature(
-            JSON.stringify({ order_id: razorpayOrderId, payment_id: razorpayPaymentId }), // Important: Stringify the body if needed or pass raw body
-            razorpaySignature,
-            razorpayKeySecret // Use the key secret directly
-        );
+        const body = razorpayOrderId + "|" + razorpayPaymentId;
+        const expectedSignature = crypto
+            .createHmac("sha256", razorpayKeySecret)
+            .update(body.toString())
+            .digest("hex");
+        return expectedSignature === razorpaySignature;
     } catch (error) {
         console.error('Error verifying Razorpay signature:', error);
         return false;
@@ -86,37 +92,42 @@ export function verifyRazorpaySignature(
 /**
  * Handles Razorpay webhook events (e.g., payment success, failure).
  * Needs to be exposed via an API route (e.g., /api/webhooks/razorpay).
- *
- * @param body - The raw request body from Razorpay.
- * @param signature - The 'X-Razorpay-Signature' header value.
- * @returns Object indicating success or failure.
+ * @param body - The parsed JSON body from the webhook request.
+ * @param signature - The 'x-razorpay-signature' header value.
+ * @returns Object indicating success or failure and appropriate status code.
  */
 export async function handleRazorpayWebhook(body: any, signature: string | undefined | string[]) {
-   if (!razorpayInstance || !razorpayKeySecret) {
-    console.error('Cannot handle Razorpay webhook: Razorpay not configured.');
-    return { received: false, error: 'Razorpay not configured' };
+   if (!razorpayInstance || !razorpayWebhookSecret) {
+    console.error('Cannot handle Razorpay webhook: Razorpay not configured or webhook secret missing.');
+    return { received: false, error: 'Razorpay not configured', status: 500 };
   }
   if (!signature || Array.isArray(signature)) {
-      console.error('Invalid Razorpay signature received.');
-      return { received: false, error: 'Invalid signature' };
+      console.error('Invalid Razorpay signature received in webhook.');
+      return { received: false, error: 'Invalid signature', status: 400 };
   }
 
 
   // 1. Verify the webhook signature (IMPORTANT for security)
    const isValid = Razorpay.utils.validateWebhookSignature(
-      JSON.stringify(body), // Ensure body is stringified correctly if it's JSON
+      JSON.stringify(body),
       signature,
-      razorpayKeySecret
+      razorpayWebhookSecret
     );
 
     if (!isValid) {
         console.error('Invalid Razorpay webhook signature.');
-        return { received: false, error: 'Invalid signature' };
+        return { received: true, processed: false, error: 'Invalid signature', status: 400 };
     }
 
     const event = body.event;
-    const paymentEntity = body.payload.payment.entity;
-    const orderEntity = body.payload.order?.entity; // Order entity might not always be present
+    const paymentEntity = body.payload?.payment?.entity;
+    const orderEntity = body.payload?.order?.entity;
+
+    if (!event || !body.payload) {
+         console.error('Invalid Razorpay webhook payload structure.');
+         return { received: true, processed: false, error: 'Invalid payload', status: 400 };
+    }
+
 
     console.log(`Received Razorpay webhook event: ${event}`);
 
@@ -126,124 +137,154 @@ export async function handleRazorpayWebhook(body: any, signature: string | undef
     try {
         let dbOrder: DbOrder | null = null;
         let dbPayment: Payment | null = null;
+        const razorpayPaymentId = paymentEntity?.id;
+        const razorpayOrderId = orderEntity?.id || paymentEntity?.order_id;
 
-        // Try finding the order using notes if available
+
         if (orderEntity?.notes?.databaseOrderId) {
              dbOrder = await DbOrder.findByPk(orderEntity.notes.databaseOrderId, { transaction });
         }
-         // Fallback: Find payment first, then order (if order notes weren't available)
-        if (!dbOrder && paymentEntity?.id) {
-             dbPayment = await Payment.findOne({ where: { provider: 'razorpay', providerPaymentId: paymentEntity.id }, transaction });
+        if (!dbOrder && razorpayPaymentId) {
+             dbPayment = await Payment.findOne({ where: { provider: 'razorpay', providerPaymentId: razorpayPaymentId }, transaction });
              if (dbPayment) {
                 dbOrder = await DbOrder.findByPk(dbPayment.orderId, { transaction });
             }
         }
-
-
-        if (!dbOrder) {
-            console.warn(`Razorpay Webhook: Could not find corresponding database order for payment ${paymentEntity?.id} or order ${orderEntity?.id}.`);
-             // Depending on your logic, you might still record the payment without an order link, or ignore.
-             await transaction.rollback();
-             return { received: true, processed: false, error: 'Order not found' };
-        }
-
-        // Find or create the Payment record
-         if (!dbPayment) {
-            dbPayment = await Payment.findOrCreate({
-                where: { orderId: dbOrder.id, provider: 'razorpay', providerPaymentId: paymentEntity.id },
-                defaults: {
-                    orderId: dbOrder.id,
-                    provider: 'razorpay',
-                    providerPaymentId: paymentEntity.id,
-                    amount: paymentEntity.amount,
-                    currency: paymentEntity.currency,
-                    status: 'pending', // Initial status, update based on event
-                    metadata: paymentEntity, // Store the whole payment entity
-                },
-                transaction
-            })[0]; // findOrCreate returns [instance, created]
+         if (!dbOrder && paymentEntity?.notes?.databaseOrderId) {
+             dbOrder = await DbOrder.findByPk(paymentEntity.notes.databaseOrderId, { transaction });
          }
 
 
-        // Update Order and Payment status based on the event
+        if (!dbOrder) {
+            console.warn(`Razorpay Webhook: Could not find corresponding database order for Razorpay payment ${razorpayPaymentId} or order ${razorpayOrderId}.`);
+             await transaction.rollback();
+             return { received: true, processed: false, error: 'Order not found', status: 200 };
+        }
+
+
+         if (razorpayPaymentId) {
+             const [foundOrCreatedPayment] = await Payment.findOrCreate({
+                 where: { orderId: dbOrder.id, provider: 'razorpay', providerPaymentId: razorpayPaymentId },
+                 defaults: {
+                     orderId: dbOrder.id,
+                     provider: 'razorpay',
+                     providerPaymentId: razorpayPaymentId,
+                     amount: paymentEntity.amount,
+                     currency: paymentEntity.currency,
+                     status: 'pending',
+                     metadata: paymentEntity,
+                 },
+                 transaction
+             });
+             dbPayment = foundOrCreatedPayment;
+         } else if (event === 'order.paid' && orderEntity) {
+             const [foundOrCreatedPayment] = await Payment.findOrCreate({
+                  where: { orderId: dbOrder.id, provider: 'razorpay'},
+                  defaults: {
+                      orderId: dbOrder.id,
+                      provider: 'razorpay',
+                      providerPaymentId: `order_${orderEntity.id}`,
+                      amount: orderEntity.amount_paid,
+                      currency: orderEntity.currency,
+                      status: 'pending',
+                      metadata: orderEntity,
+                  },
+                  transaction
+             });
+              dbPayment = foundOrCreatedPayment;
+         }
+
+
+        if (!dbPayment) {
+             console.warn(`Razorpay Webhook: Could not find or create payment record for order ${dbOrder.id} and event ${event}.`);
+             await transaction.rollback();
+             return { received: true, processed: false, error: 'Payment record handling failed', status: 200 };
+         }
+
+
+        let fulfillmentRequired = false;
         switch (event) {
             case 'payment.captured':
-            case 'payment.authorized': // Treat authorized as success for immediate update
-                dbOrder.status = 'in_progress'; // Or 'completed' if service delivery is instant
-                dbPayment.status = 'succeeded';
-                dbPayment.metadata = paymentEntity; // Update metadata
-                await dbOrder.save({ transaction });
-                await dbPayment.save({ transaction });
-                console.log(`Razorpay Webhook: Order ${dbOrder.id} payment succeeded.`);
-                // TODO: Trigger fulfillment logic (e.g., notify freelancer)
-                break;
-
-            case 'payment.failed':
-                // Order status might remain 'pending' or move to 'failed'/'cancelled'
-                // dbOrder.status = 'pending'; // Or 'failed'
-                dbPayment.status = 'failed';
-                dbPayment.metadata = paymentEntity;
-                // await dbOrder.save({ transaction }); // Only save if status changed
-                await dbPayment.save({ transaction });
-                console.log(`Razorpay Webhook: Order ${dbOrder.id} payment failed. Reason: ${paymentEntity.error_description}`);
-                break;
-
-            case 'order.paid':
-                 // This often confirms the payment for the order was successful
+            case 'payment.authorized':
                 if (dbOrder.status === 'pending') {
                     dbOrder.status = 'in_progress';
                     await dbOrder.save({ transaction });
+                    fulfillmentRequired = true;
                  }
-                 if (dbPayment.status !== 'succeeded') {
-                     dbPayment.status = 'succeeded';
-                     dbPayment.metadata = paymentEntity; // Update with order payment details if needed
-                     await dbPayment.save({ transaction });
+                if (dbPayment.status !== 'succeeded') {
+                    dbPayment.status = 'succeeded';
+                    dbPayment.metadata = paymentEntity;
+                    await dbPayment.save({ transaction });
                  }
-                 console.log(`Razorpay Webhook: Order ${dbOrder.id} marked as paid.`);
-                 // TODO: Trigger fulfillment logic
+                console.log(`Razorpay Webhook: Order ${dbOrder.id} payment ${razorpayPaymentId} ${event}.`);
+                break;
+
+            case 'payment.failed':
+                 dbPayment.status = 'failed';
+                 dbPayment.metadata = paymentEntity;
+                 await dbPayment.save({ transaction });
+                 console.log(`Razorpay Webhook: Order ${dbOrder.id} payment ${razorpayPaymentId} failed. Reason: ${paymentEntity?.error_description}`);
                  break;
 
-            // --- Handle Refunds (Optional) ---
+             case 'order.paid':
+                 if (dbOrder.status === 'pending') {
+                     dbOrder.status = 'in_progress';
+                     await dbOrder.save({ transaction });
+                      fulfillmentRequired = true;
+                  }
+                  if (dbPayment.status !== 'succeeded') {
+                      dbPayment.status = 'succeeded';
+                      if (paymentEntity) dbPayment.metadata = paymentEntity;
+                      else if (orderEntity) dbPayment.metadata = { ...(dbPayment.metadata || {}), order_paid: orderEntity };
+                      await dbPayment.save({ transaction });
+                  }
+                  console.log(`Razorpay Webhook: Order ${dbOrder.id} marked as paid via order.paid event.`);
+                  break;
+
             case 'refund.processed':
-                 const refundEntity = body.payload.refund.entity;
-                 // Find the original payment
+                 const refundEntity = body.payload?.refund?.entity;
+                 if (!refundEntity || !refundEntity.payment_id) {
+                      console.warn('Razorpay Webhook: Invalid refund entity in refund.processed event.');
+                      break;
+                 }
                  const originalPaymentForRefund = await Payment.findOne({
                      where: { provider: 'razorpay', providerPaymentId: refundEntity.payment_id },
                      transaction
                  });
                  if (originalPaymentForRefund) {
                      originalPaymentForRefund.status = 'refunded';
-                     // You might add refund details to metadata or a separate Refund model
                      originalPaymentForRefund.metadata = {
                         ...(originalPaymentForRefund.metadata || {}),
                          refund: refundEntity
                      };
                      await originalPaymentForRefund.save({ transaction });
-                     // Update order status if necessary (e.g., to 'cancelled' or 'refunded')
+
                      const refundedOrder = await DbOrder.findByPk(originalPaymentForRefund.orderId, { transaction });
-                     if(refundedOrder) {
-                        // Decide appropriate status, e.g., 'cancelled'
-                        // refundedOrder.status = 'cancelled';
-                        // await refundedOrder.save({ transaction });
+                     if(refundedOrder && refundedOrder.status !== 'cancelled') {
+                        refundedOrder.status = 'cancelled';
+                        await refundedOrder.save({ transaction });
                      }
-                     console.log(`Razorpay Webhook: Refund processed for payment ${refundEntity.payment_id}.`);
+                     console.log(`Razorpay Webhook: Refund ${refundEntity.id} processed for payment ${refundEntity.payment_id}.`);
                  } else {
                     console.warn(`Razorpay Webhook: Could not find original payment for refund ${refundEntity.id}`);
                  }
                  break;
-
-            // --- Add other relevant events as needed ---
 
             default:
                 console.log(`Razorpay Webhook: Unhandled event type: ${event}`);
         }
 
         await transaction.commit();
-        return { received: true, processed: true };
+
+        if (fulfillmentRequired) {
+            console.log(`Placeholder: Trigger fulfillment for Order ID: ${dbOrder.id}`);
+        }
+
+        return { received: true, processed: true, status: 200 };
 
     } catch (error: any) {
         await transaction.rollback();
-        console.error(`Razorpay Webhook Error processing event ${body?.event}:`, error);
-        return { received: true, processed: false, error: error.message || 'Internal server error' };
+        console.error(`Razorpay Webhook Error processing event ${event}:`, error);
+        return { received: true, processed: false, error: error.message || 'Internal server error', status: 500 };
     }
 }
