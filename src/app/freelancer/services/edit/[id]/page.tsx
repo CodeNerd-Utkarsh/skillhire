@@ -25,29 +25,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { getServiceForEditById, updateService, deleteService } from '@/services/service';
+import { UserPayload } from '@/lib/auth';
+import type { Service } from '@/models';
 
 
-async function getServiceForEdit(id: string) {
-
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const mockServiceData: Record<string, any> = {
-    "1": { title: "Modern Web App Development", description: "Full-stack web application using React, Node.js.", category: "Web Development", price: 120000, deliveryTime: "7", revisions: "3", image: `https://picsum.photos/seed/11/400/300`, aiHint: "web development coding screen" },
-    "2": { title: "Brand Identity Design", description: "Logo, color palette, and style guide.", category: "Graphic Design", price: 80000, deliveryTime: "5", revisions: "5", image: `https://picsum.photos/seed/12/400/300`, aiHint: "logo design branding" },
-    "3": { title: "Technical Article Writing", description: "Well-researched articles on tech topics.", category: "Content Writing", price: 25000, deliveryTime: "3", revisions: "2", image: `https://picsum.photos/seed/13/400/300`, aiHint: "technical writing code" },
-    "4": { title: "Social Media Marketing Strategy", description: "Comprehensive SMM plan.", category: "Digital Marketing", price: 95000, deliveryTime: "10", revisions: "3", image: `https://picsum.photos/seed/14/400/300`, aiHint: "social media marketing analytics" },
-    "5": { title: "E-commerce Site Setup", description: "Shopify or WooCommerce store creation.", category: "Web Development", price: 75000, deliveryTime: "6", revisions: "2", image: `https://picsum.photos/seed/15/400/300`, aiHint: "e-commerce online shopping" },
-    "6": { title: "Promotional Video Editing", description: "Professional video editing for ads.", category: "Video & Animation", price: 40000, deliveryTime: "4", revisions: "3", image: `https://picsum.photos/seed/16/400/300`, aiHint: "video editing software" },
-    "7": { title: "Mobile App UI/UX Design", description: "User-friendly mobile interface designs.", category: "Graphic Design", price: 100000, deliveryTime: "8", revisions: "4", image: `https://picsum.photos/seed/17/400/300`, aiHint: "mobile app design sketch" },
-    "8": { title: "SEO Audit & Optimization", description: "Improve your website's search ranking.", category: "Digital Marketing", price: 60000, deliveryTime: "5", revisions: "1", image: `https://picsum.photos/seed/18/400/300`, aiHint: "seo analysis report" },
-    "9": { title: "Custom Illustrations", description: "Unique illustrations for web or print.", category: "Graphic Design", price: 35000, deliveryTime: "4", revisions: "3", image: `https://picsum.photos/seed/19/400/300`, aiHint: "digital illustration art" },
-    "10": { title: "Voice Over Recording", description: "Professional voice overs for videos.", category: "Music & Audio", price: 15000, deliveryTime: "2", revisions: "2", image: `https://picsum.photos/seed/20/400/300`, aiHint: "microphone recording studio" },
-    "11": { title: "Python Scripting for Automation", description: "Automate tasks with Python scripts.", category: "Programming & Tech", price: 50000, deliveryTime: "5", revisions: "3", image: `https://picsum.photos/seed/21/400/300`, aiHint: "python code computer" },
-    "12": { title: "Business Plan Writing", description: "Detailed business plans for startups.", category: "Business", price: 110000, deliveryTime: "10", revisions: "3", image: `https://picsum.photos/seed/22/400/300`, aiHint: "business plan document" },
-  };
-
-  return mockServiceData[id] || null;
-}
-
+type ServiceFormData = Omit<Service, 'createdAt' | 'updatedAt' | 'freelancerId' | 'id'> & {
+    price: string | number;
+    deliveryTime: string | number;
+    revisions: string | number;
+};
 
 
 const categories = [
@@ -64,16 +51,12 @@ const categories = [
 
 interface EditServicePageProps {
   params: { id: string };
+  user: UserPayload | null;
 }
 
-export default function EditServicePage({ params }: EditServicePageProps) {
+export default function EditServicePage({ params, user }: EditServicePageProps) {
   const serviceId = params.id;
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
-  const [price, setPrice] = useState(''); // Price in dollars for input field
-  const [deliveryTime, setDeliveryTime] = useState('');
-  const [revisions, setRevisions] = useState('');
+  const [formData, setFormData] = useState<Partial<ServiceFormData>>({});
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
@@ -84,20 +67,28 @@ export default function EditServicePage({ params }: EditServicePageProps) {
 
    useEffect(() => {
       const fetchServiceData = async () => {
+        if (!user || user.role !== 'freelancer') {
+            toast({ title: "Unauthorized", description: "You cannot edit this service.", variant: "destructive" });
+            setIsLoading(false);
+            return;
+        }
         setIsLoading(true);
         try {
-          const serviceData = await getServiceForEdit(serviceId);
-          if (serviceData) {
-            setTitle(serviceData.title);
-            setDescription(serviceData.description);
-            setCategory(serviceData.category);
-            setPrice((serviceData.price / 100).toFixed(2)); // Convert cents to dollars for display
-            setDeliveryTime(serviceData.deliveryTime);
-            setRevisions(serviceData.revisions?.toString() || '');
-            setExistingImageUrl(serviceData.image);
+          const serviceData = await getServiceForEditById(serviceId);
+          if (serviceData && serviceData.freelancerId === user.id) {
+             setFormData({
+                 title: serviceData.title,
+                 description: serviceData.description,
+                 category: serviceData.category,
+                 price: (serviceData.price / 100).toFixed(2),
+                 deliveryTime: serviceData.deliveryTime.toString(),
+                 revisions: serviceData.revisions.toString(),
+                 status: serviceData.status,
+             });
+            setExistingImageUrl(serviceData.imageUrl);
           } else {
              toast({ title: "Error", description: "Service not found or you don't have permission to edit it.", variant: "destructive" });
-
+             setFormData({});
           }
         } catch (error) {
           console.error("Failed to fetch service data:", error);
@@ -108,13 +99,22 @@ export default function EditServicePage({ params }: EditServicePageProps) {
       };
 
       fetchServiceData();
-    }, [serviceId, toast]);
+    }, [serviceId, toast, user]);
+
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+   const handleSelectChange = (name: keyof ServiceFormData, value: string) => {
+     setFormData(prev => ({ ...prev, [name]: value }));
+   };
 
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-
       if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
          toast({ title: "Invalid File Type", description: "Please upload a PNG, JPG, or WEBP image.", variant: "destructive" });
          return;
@@ -135,56 +135,72 @@ export default function EditServicePage({ params }: EditServicePageProps) {
 
   const handleSaveChanges = async (e: React.FormEvent) => {
     e.preventDefault();
+     if (!user || user.role !== 'freelancer') {
+         toast({ title: "Unauthorized", description: "You cannot save changes.", variant: "destructive" });
+         return;
+     }
     setIsSaving(true);
 
 
-     if (!title || !description || !category || !price || !deliveryTime) {
+     if (!formData.title || !formData.description || !formData.category || !formData.price || !formData.deliveryTime) {
          toast({ title: "Missing Information", description: "Please fill out all required fields.", variant: "destructive" });
          setIsSaving(false);
          return;
      }
-     const priceInCents = Math.round(parseFloat(price) * 100);
-     if (isNaN(priceInCents) || priceInCents < 500) { // $5.00 minimum
+     const priceInCents = Math.round(parseFloat(String(formData.price)) * 100);
+     if (isNaN(priceInCents) || priceInCents < 500) {
          toast({ title: "Invalid Price", description: "Price must be a number and at least $5.00.", variant: "destructive" });
          setIsSaving(false);
          return;
      }
-      if (isNaN(parseInt(deliveryTime)) || parseInt(deliveryTime) < 1) {
+      const deliveryDays = parseInt(String(formData.deliveryTime));
+      if (isNaN(deliveryDays) || deliveryDays < 1) {
          toast({ title: "Invalid Delivery Time", description: "Delivery time must be a whole number of at least 1 day.", variant: "destructive" });
+         setIsSaving(false);
+         return;
+     }
+      const numRevisions = formData.revisions ? parseInt(String(formData.revisions)) : 0;
+       if (isNaN(numRevisions) || numRevisions < 0) {
+         toast({ title: "Invalid Revisions", description: "Revisions must be a non-negative whole number.", variant: "destructive" });
          setIsSaving(false);
          return;
      }
 
 
-    const formData = new FormData();
-    formData.append('title', title);
-    formData.append('description', description);
-    formData.append('category', category);
-    formData.append('price', priceInCents.toString()); // Send price in cents
-    formData.append('deliveryTime', deliveryTime);
-    formData.append('revisions', revisions || '0');
+    const updateData = new FormData();
+    updateData.append('title', formData.title);
+    updateData.append('description', formData.description);
+    updateData.append('category', formData.category);
+    updateData.append('price', priceInCents.toString());
+    updateData.append('deliveryTime', deliveryDays.toString());
+    updateData.append('revisions', numRevisions.toString());
+     if (formData.status) {
+        updateData.append('status', formData.status);
+     }
     if (imageFile) {
-      formData.append('image', imageFile);
+      updateData.append('image', imageFile);
     }
 
     console.log("Saving changes for service:", serviceId);
 
 
-
     try {
+        const result = await updateService(serviceId, updateData);
+        if (result.error) {
+            throw new Error(result.error);
+        }
+
+        toast({
+            title: "Service Updated Successfully",
+            description: `Changes to "${formData.title}" have been saved.`,
+            variant: "default",
+        });
 
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast({
-        title: "Service Updated Successfully",
-        description: `Changes to "${title}" have been saved.`,
-        variant: "default",
-      });
-
-       if (imagePreview) {
-         setExistingImageUrl(imagePreview);
-         setImageFile(null);
-         setImagePreview(null);
+       if (result.service?.imageUrl) {
+          setExistingImageUrl(result.service.imageUrl);
+          setImageFile(null);
+          setImagePreview(null);
        }
 
 
@@ -201,17 +217,25 @@ export default function EditServicePage({ params }: EditServicePageProps) {
   };
 
  const handleDeleteService = async () => {
+      if (!user || user.role !== 'freelancer') {
+         toast({ title: "Unauthorized", description: "You cannot delete this service.", variant: "destructive" });
+         return;
+      }
      setIsDeleting(true);
      console.log("Attempting to delete service:", serviceId);
 
      try {
+        const result = await deleteService(serviceId);
+        if (result.error) {
+            throw new Error(result.error);
+        }
 
-
-        await new Promise(resolve => setTimeout(resolve, 1000));
         toast({
           title: "Service Deleted",
-          description: `"${title}" has been removed from your listings.`,
+          description: `"${formData.title || 'Service'}" has been removed.`,
         });
+
+
 
          window.location.href = '/freelancer/dashboard';
 
@@ -223,15 +247,15 @@ export default function EditServicePage({ params }: EditServicePageProps) {
           description: error.message || "Could not delete the service. Please try again.",
           variant: "destructive",
         });
-     } finally {
-
+         setIsDeleting(false);
      }
+
  };
 
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-background to-blue-50 dark:from-slate-900 dark:to-slate-800">
-      <Header />
+      <Header user={user} />
       <main className="flex-grow container mx-auto px-4 py-8">
          <Link href="/freelancer/dashboard" passHref>
            <Button variant="outline" size="sm" className="mb-6 rounded-full">
@@ -245,9 +269,10 @@ export default function EditServicePage({ params }: EditServicePageProps) {
                  <CardTitle className="text-2xl font-bold text-primary">Edit Service</CardTitle>
                  <CardDescription>Update the details of your service listing.</CardDescription>
              </div>
+
               <AlertDialog onOpenChange={(open) => !open && setIsDeleting(false)}>
                  <AlertDialogTrigger asChild>
-                   <Button variant="destructive" size="sm" disabled={isLoading || isSaving || isDeleting} className="rounded-full">
+                   <Button variant="destructive" size="sm" disabled={isLoading || isSaving || isDeleting || Object.keys(formData).length === 0} className="rounded-full">
                      <Trash2 className="mr-2 h-4 w-4" /> Delete Service
                    </Button>
                  </AlertDialogTrigger>
@@ -278,6 +303,7 @@ export default function EditServicePage({ params }: EditServicePageProps) {
           <CardContent className="pt-6">
             {isLoading ? (
                <div className="space-y-6 p-4">
+
                   <Skeleton className="h-10 w-full rounded-md" />
                   <Skeleton className="h-10 w-1/2 rounded-md" />
                   <Skeleton className="h-24 w-full rounded-md" />
@@ -294,16 +320,20 @@ export default function EditServicePage({ params }: EditServicePageProps) {
                      <Skeleton className="h-10 w-32 rounded-full" />
                    </div>
                </div>
+            ) : Object.keys(formData).length === 0 ? (
+                 <p className="text-center text-muted-foreground">Service not found or you do not have permission to edit it.</p>
             ) : (
             <form onSubmit={handleSaveChanges} className="space-y-6">
+
               <div className="space-y-2">
                 <Label htmlFor="title">Service Title</Label>
                 <Input
                   id="title"
+                  name="title"
                   placeholder="e.g., I will design a professional logo for your brand"
                   required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  value={formData.title || ''}
+                  onChange={handleInputChange}
                   maxLength={80}
                   disabled={isSaving || isDeleting}
                   className="rounded-md"
@@ -311,9 +341,15 @@ export default function EditServicePage({ params }: EditServicePageProps) {
                  <p className="text-xs text-muted-foreground">Max 80 characters. Clear and concise.</p>
               </div>
 
+
               <div className="space-y-2">
                  <Label htmlFor="category">Category</Label>
-                 <Select onValueChange={setCategory} value={category} required disabled={isSaving || isDeleting}>
+                 <Select
+                    onValueChange={(value) => handleSelectChange('category', value)}
+                    value={formData.category || ''}
+                    required
+                    disabled={isSaving || isDeleting}
+                 >
                    <SelectTrigger id="category" className="rounded-md">
                      <SelectValue placeholder="Select a category" />
                    </SelectTrigger>
@@ -325,32 +361,36 @@ export default function EditServicePage({ params }: EditServicePageProps) {
                  </Select>
                </div>
 
+
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
+                  name="description"
                   placeholder="Describe your service in detail..."
                   required
                   rows={5}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  value={formData.description || ''}
+                  onChange={handleInputChange}
                   disabled={isSaving || isDeleting}
                   className="rounded-md"
                 />
                  <p className="text-xs text-muted-foreground">Explain what you offer, your process, and deliverables.</p>
               </div>
 
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                  <div className="space-y-2">
                    <Label htmlFor="price">Price ($)</Label>
                    <Input
                      id="price"
+                     name="price"
                      type="number"
                      placeholder="e.g., 50.00"
                      required
                      min="5.00" step="0.01"
-                     value={price}
-                     onChange={(e) => setPrice(e.target.value)}
+                     value={formData.price || ''}
+                     onChange={handleInputChange}
                      disabled={isSaving || isDeleting}
                      className="rounded-md"
                    />
@@ -359,12 +399,13 @@ export default function EditServicePage({ params }: EditServicePageProps) {
                    <Label htmlFor="deliveryTime">Delivery Time (Days)</Label>
                    <Input
                      id="deliveryTime"
+                     name="deliveryTime"
                      type="number"
                      placeholder="e.g., 3"
                      required
-                     min="1"
-                     value={deliveryTime}
-                     onChange={(e) => setDeliveryTime(e.target.value)}
+                     min="1" step="1"
+                     value={formData.deliveryTime || ''}
+                     onChange={handleInputChange}
                      disabled={isSaving || isDeleting}
                       className="rounded-md"
                    />
@@ -373,16 +414,40 @@ export default function EditServicePage({ params }: EditServicePageProps) {
                     <Label htmlFor="revisions">Revisions</Label>
                      <Input
                        id="revisions"
+                       name="revisions"
                        type="number"
                        placeholder="e.g., 2 (optional)"
-                       min="0"
-                       value={revisions}
-                       onChange={(e) => setRevisions(e.target.value)}
+                       min="0" step="1"
+                       value={formData.revisions || ''}
+                       onChange={handleInputChange}
                        disabled={isSaving || isDeleting}
                         className="rounded-md"
                      />
                   </div>
               </div>
+
+
+             <div className="space-y-2">
+                 <Label htmlFor="status">Service Status</Label>
+                 <Select
+                    onValueChange={(value) => handleSelectChange('status', value as 'active' | 'paused' | 'draft')}
+                    value={formData.status || 'draft'}
+                    required
+                    disabled={isSaving || isDeleting}
+                 >
+                   <SelectTrigger id="status" className="rounded-md">
+                     <SelectValue placeholder="Select status" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="active">Active (Visible to Clients)</SelectItem>
+                     <SelectItem value="paused">Paused (Hidden from Marketplace)</SelectItem>
+                     <SelectItem value="draft">Draft (Not Visible)</SelectItem>
+                   </SelectContent>
+                 </Select>
+                 <p className="text-xs text-muted-foreground">Control the visibility of your service.</p>
+               </div>
+
+
 
               <div className="space-y-2">
                 <Label htmlFor="image">Service Image</Label>
@@ -404,7 +469,6 @@ export default function EditServicePage({ params }: EditServicePageProps) {
                      id="image"
                      type="file"
                      accept="image/png, image/jpeg, image/webp"
-
                      onChange={handleImageChange}
                      className="hidden"
                      disabled={isSaving || isDeleting}
@@ -416,6 +480,7 @@ export default function EditServicePage({ params }: EditServicePageProps) {
                  </div>
                  <p className="text-xs text-muted-foreground">Upload a new image (JPG, PNG, WEBP, max 5MB) to replace the current one (optional).</p>
               </div>
+
 
               <div className="flex justify-end pt-4">
                  <Button type="submit" disabled={isSaving || isLoading || isDeleting} className="rounded-full shadow-md hover:shadow-lg transition-shadow">
@@ -436,3 +501,5 @@ export default function EditServicePage({ params }: EditServicePageProps) {
     </div>
   );
 }
+
+

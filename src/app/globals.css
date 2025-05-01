@@ -8,96 +8,94 @@ body {
 
 @layer base {
   :root {
-    /* --- Light Theme --- */
-    /* Base: Slate */
-    --background: 210 40% 98%; /* slate-50 */
-    --foreground: 222 47% 11.2%; /* slate-700 */
-    --card: 0 0% 100%; /* white */
-    --card-foreground: 222 47% 11.2%; /* slate-700 */
-    --popover: 0 0% 100%; /* white */
-    --popover-foreground: 222 47% 11.2%; /* slate-700 */
-    /* Primary: Indigo */
-    --primary: 224 71.4% 40%; /* indigo-600 */
-    --primary-foreground: 0 0% 100%; /* white */
-    /* Secondary: Slate */
-    --secondary: 215.4 16.3% 94.9%; /* slate-100 */
-    --secondary-foreground: 222 47% 11.2%; /* slate-700 */
-    /* Muted: Slate */
-    --muted: 215.4 16.3% 94.9%; /* slate-100 */
-    --muted-foreground: 223.5 29.8% 53.9%; /* slate-500 */
-    /* Accent: Teal */
-    --accent: 173 80% 36%; /* teal-600 */
-    --accent-foreground: 0 0% 100%; /* white */
-    /* Destructive: Red (Default) */
+
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11.2%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11.2%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11.2%;
+
+    --primary: 224 71.4% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 215.4 16.3% 94.9%;
+    --secondary-foreground: 222 47% 11.2%;
+
+    --muted: 215.4 16.3% 94.9%;
+    --muted-foreground: 223.5 29.8% 53.9%;
+
+    --accent: 173 80% 36%;
+    --accent-foreground: 0 0% 100%;
+
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%; /* slate-50 */
-    /* Border/Input/Ring: Slate & Primary */
-    --border: 214.3 31.8% 91.4%; /* slate-200 */
-    --input: 214.3 31.8% 91.4%; /* slate-200 */
-    --ring: 224 76.3% 48%; /* indigo-500 */
-    /* Chart colors */
-    --chart-1: 224 71% 40%; /* Primary */
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 224 76.3% 48%;
+
+    --chart-1: 224 71% 40%;
     --chart-2: 224 60% 60%;
     --chart-3: 224 50% 75%;
-    --chart-4: 173 80% 36%; /* Accent Teal */
+    --chart-4: 173 80% 36%;
     --chart-5: 173 70% 55%;
-    /* Radius */
+
     --radius: 0.5rem;
-    /* Sidebar colors matching the main theme */
-    --sidebar-background: 215.4 16.3% 96.5%; /* Slightly off-white, slate-50/100 blend */
-    --sidebar-foreground: 222 47% 11.2%; /* slate-700 */
-    --sidebar-primary: 224 71.4% 40%; /* Primary Indigo */
+
+    --sidebar-background: 215.4 16.3% 96.5%;
+    --sidebar-foreground: 222 47% 11.2%;
+    --sidebar-primary: 224 71.4% 40%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 173 80% 36%; /* Accent Teal */
-    --sidebar-accent-foreground: 0 0% 100%; /* white */
-    --sidebar-border: 214.3 31.8% 91.4%; /* slate-200 */
-    --sidebar-ring: 224 76.3% 48%; /* indigo-500 */
+    --sidebar-accent: 173 80% 36%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 224 76.3% 48%;
   }
   .dark {
-    /* --- Dark Theme --- */
-    /* Base: Slate */
-    --background: 222.2 84% 4.9%; /* slate-950 */
-    --foreground: 210 40% 98%; /* slate-50 */
-    --card: 222.2 70% 9.0%; /* slate-900 */
-    --card-foreground: 210 40% 98%; /* slate-50 */
-    --popover: 222.2 84% 4.9%; /* slate-950 */
-    --popover-foreground: 210 40% 98%; /* slate-50 */
-    /* Primary: Indigo */
-    --primary: 224 76.3% 48%; /* indigo-500 */
-    --primary-foreground: 210 40% 98%; /* slate-50 */
-    /* Secondary: Slate */
-    --secondary: 217.2 32.6% 17.5%; /* slate-800 */
-    --secondary-foreground: 210 40% 98%; /* slate-50 */
-    /* Muted: Slate */
-    --muted: 217.2 32.6% 17.5%; /* slate-800 */
-    --muted-foreground: 215 20.2% 65.1%; /* slate-400 */
-    /* Accent: Teal */
-    --accent: 173 70% 55%; /* teal-400 */
-    --accent-foreground: 222.2 84% 4.9%; /* slate-950 */
-    /* Destructive: Red (Default) */
+
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 70% 9.0%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 224 76.3% 48%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 173 70% 55%;
+    --accent-foreground: 222.2 84% 4.9%;
+
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%; /* slate-50 */
-     /* Border/Input/Ring: Slate & Primary */
-    --border: 217.2 32.6% 25%; /* slate-700 */
-    --input: 217.2 32.6% 17.5%; /* slate-800 */
-    --ring: 224 76.3% 48%; /* indigo-500 */
-    /* Chart colors */
-    --chart-1: 224 76% 48%; /* Primary */
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 217.2 32.6% 25%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224 76.3% 48%;
+
+    --chart-1: 224 76% 48%;
     --chart-2: 224 65% 65%;
     --chart-3: 224 55% 80%;
-    --chart-4: 173 70% 55%; /* Accent Teal */
+    --chart-4: 173 70% 55%;
     --chart-5: 173 60% 70%;
-    /* Radius */
+
     --radius: 0.5rem;
-    /* Sidebar colors matching the dark theme */
-    --sidebar-background: 222.2 84% 4.9%; /* slate-950 */
-    --sidebar-foreground: 210 40% 98%; /* slate-50 */
-    --sidebar-primary: 224 76.3% 48%; /* Primary Indigo */
+
+    --sidebar-background: 222.2 84% 4.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 224 76.3% 48%;
     --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 173 70% 55%; /* Accent Teal */
-    --sidebar-accent-foreground: 222.2 84% 4.9%; /* slate-950 */
-    --sidebar-border: 217.2 32.6% 25%; /* slate-700 */
-    --sidebar-ring: 224 76.3% 48%; /* indigo-500 */
+    --sidebar-accent: 173 70% 55%;
+    --sidebar-accent-foreground: 222.2 84% 4.9%;
+    --sidebar-border: 217.2 32.6% 25%;
+    --sidebar-ring: 224 76.3% 48%;
   }
 }
 
@@ -107,10 +105,10 @@ body {
   }
   body {
     @apply bg-background text-foreground;
-    /* Add smooth scrolling */
+
     scroll-behavior: smooth;
   }
-  /* Improve focus visibility */
+
   *:focus-visible {
       @apply ring-2 ring-ring ring-offset-2 ring-offset-background;
   }

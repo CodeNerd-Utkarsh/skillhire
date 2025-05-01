@@ -10,13 +10,10 @@ if (!databaseUrl) {
 
 export const sequelize = new Sequelize(databaseUrl, {
   dialect: 'postgres',
-  logging: process.env.NODE_ENV === 'development' ? console.log : false, // Log queries in development
+  logging: process.env.NODE_ENV === 'development' ? console.log : false,
   dialectOptions: {
-    // Add SSL options if required for your PostgreSQL setup (e.g., on cloud providers)
-    // ssl: {
-    //   require: true,
-    //   rejectUnauthorized: false // Adjust based on your certificate setup
-    // }
+
+
   },
 });
 
@@ -26,10 +23,9 @@ export async function testDbConnection() {
     console.log('Database connection has been established successfully.');
   } catch (error) {
     console.error('Unable to connect to the database:', error);
-    throw error; // Re-throw error to indicate failure
+    throw error;
   }
 }
 
-// Optional: Export the instance directly if needed elsewhere,
-// but models usually import this instance internally.
-// export default sequelize;
+
+

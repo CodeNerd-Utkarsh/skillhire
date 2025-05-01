@@ -27,16 +27,16 @@ export async function comparePassword(password: string, hash: string): Promise<b
 
 
 export async function generateToken(payload: UserPayload): Promise<string> {
-  return jwt.sign(payload, SECRET_KEY, { expiresIn: '1d' }); // Example: 1 day expiry
+  return jwt.sign(payload, SECRET_KEY, { expiresIn: '1d' });
 }
 
 
 export async function verifyToken(token: string): Promise<UserPayload | null> {
   try {
-    // The decoded type will include standard JWT claims like iat, exp
+
     const decoded = jwt.verify(token, SECRET_KEY) as jwt.JwtPayload & UserPayload;
 
-    // Basic check for required fields after verification
+
     if (decoded && decoded.id && decoded.email && decoded.role) {
         return { id: decoded.id, email: decoded.email, role: decoded.role };
     }

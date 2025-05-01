@@ -1,10 +1,10 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import { sequelize } from '@/lib/db';
-import type { Service } from './service'; // Import type for association
-import type { Order } from './order'; // Import type for association
+import type { Service } from './service';
+import type { Order } from './order';
 
 interface UserAttributes {
-  id: string; // Use UUID or keep as string if using custom IDs
+  id: string;
   name: string;
   email: string;
   passwordHash: string;
@@ -25,9 +25,9 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
-  // Define associations here after initialization
+
   public readonly services?: Service[];
-  public readonly orders?: Order[]; // Orders placed by client or received by freelancer
+  public readonly orders?: Order[];
 }
 
 User.init(
@@ -61,7 +61,7 @@ User.init(
   {
     sequelize,
     tableName: 'users',
-    timestamps: true, // Automatically add createdAt and updatedAt
-    underscored: true, // Use snake_case for column names in the database
+    timestamps: true,
+    underscored: true,
   }
 );

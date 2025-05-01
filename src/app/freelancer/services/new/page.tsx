@@ -9,12 +9,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, PlusCircle, Upload } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Upload, Image as ImageIcon } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import Link from 'next/link';
-import Image from 'next/image'; // Use Next.js Image
+import Image from 'next/image';
+import { createService } from '@/services/service';
+import { UserPayload } from '@/lib/auth';
 
-// TODO: Fetch categories from DB or config
+interface CreateServicePageProps {
+  user: UserPayload | null;
+}
+
+
 const categories = [
   "Web Development",
   "Graphic Design",
@@ -27,17 +33,18 @@ const categories = [
   "Lifestyle",
 ];
 
-export default function CreateServicePage() {
+export default function CreateServicePage({ user }: CreateServicePageProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  const [price, setPrice] = useState(''); // Price in dollars for input
+  const [price, setPrice] = useState('');
   const [deliveryTime, setDeliveryTime] = useState('');
   const [revisions, setRevisions] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -46,14 +53,14 @@ export default function CreateServicePage() {
          toast({ title: "Invalid File Type", description: "Please upload a PNG, JPG, or WEBP image.", variant: "destructive" });
          setImageFile(null);
          setImagePreview(null);
-         e.target.value = ''; // Reset file input
+         e.target.value = '';
          return;
        }
-       if (file.size > 5 * 1024 * 1024) { // 5MB limit
+       if (file.size > 5 * 1024 * 1024) {
           toast({ title: "File Too Large", description: "Image size should not exceed 5MB.", variant: "destructive" });
           setImageFile(null);
           setImagePreview(null);
-          e.target.value = ''; // Reset file input
+          e.target.value = '';
           return;
        }
 
@@ -71,6 +78,10 @@ export default function CreateServicePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user || user.role !== 'freelancer') {
+         toast({ title: "Unauthorized", description: "You must be logged in as a freelancer to create services.", variant: "destructive" });
+         return;
+    }
     setIsLoading(true);
 
 
@@ -84,13 +95,20 @@ export default function CreateServicePage() {
         setIsLoading(false);
         return;
     }
-     if (isNaN(priceInCents) || priceInCents < 500) { // $5.00 minimum
+     if (isNaN(priceInCents) || priceInCents < 500) {
          toast({ title: "Invalid Price", description: "Price must be a number and at least $5.00.", variant: "destructive" });
          setIsLoading(false);
          return;
      }
-      if (isNaN(parseInt(deliveryTime)) || parseInt(deliveryTime) < 1) {
+      const deliveryDays = parseInt(deliveryTime);
+      if (isNaN(deliveryDays) || deliveryDays < 1) {
          toast({ title: "Invalid Delivery Time", description: "Delivery time must be a whole number of at least 1 day.", variant: "destructive" });
+         setIsLoading(false);
+         return;
+     }
+     const numRevisions = revisions ? parseInt(revisions) : 0;
+     if (isNaN(numRevisions) || numRevisions < 0) {
+         toast({ title: "Invalid Revisions", description: "Revisions must be a non-negative whole number.", variant: "destructive" });
          setIsLoading(false);
          return;
      }
@@ -100,25 +118,28 @@ export default function CreateServicePage() {
     formData.append('title', title);
     formData.append('description', description);
     formData.append('category', category);
-    formData.append('price', priceInCents.toString()); // Send price in cents
-    formData.append('deliveryTime', deliveryTime);
-    formData.append('revisions', revisions || '0');
-    if (imageFile) {
-      formData.append('image', imageFile);
-    }
+    formData.append('price', priceInCents.toString());
+    formData.append('deliveryTime', deliveryDays.toString());
+    formData.append('revisions', numRevisions.toString());
+    formData.append('image', imageFile);
 
-    console.log("Creating service with:", { title, description, category, priceInCents, deliveryTime, revisions, imageName: imageFile?.name });
 
+    console.log("Creating service with:", { title, description, category, priceInCents, deliveryTime: deliveryDays, revisions: numRevisions, imageName: imageFile?.name });
 
 
     try {
+      const result = await createService(formData);
 
+      if (result.error) {
+           throw new Error(result.error);
+      }
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
       toast({
         title: "Service Created Successfully",
         description: `"${title}" has been added to your listings.`,
       });
+
+
 
        window.location.href = '/freelancer/dashboard';
 
@@ -137,7 +158,7 @@ export default function CreateServicePage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header />
+      <Header user={user} />
       <main className="flex-grow container mx-auto px-4 py-8">
          <Link href="/freelancer/dashboard" passHref>
            <Button variant="outline" size="sm" className="mb-6 rounded-full">
@@ -152,6 +173,7 @@ export default function CreateServicePage() {
           </CardHeader>
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-6">
+
               <div className="space-y-2">
                 <Label htmlFor="title">Service Title</Label>
                 <Input
@@ -167,6 +189,7 @@ export default function CreateServicePage() {
                  <p className="text-xs text-muted-foreground">Max 80 characters. Keep it concise and clear.</p>
               </div>
 
+
               <div className="space-y-2">
                  <Label htmlFor="category">Category</Label>
                  <Select onValueChange={setCategory} value={category} required disabled={isLoading}>
@@ -180,6 +203,7 @@ export default function CreateServicePage() {
                    </SelectContent>
                  </Select>
                </div>
+
 
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
@@ -195,6 +219,7 @@ export default function CreateServicePage() {
                 />
                 <p className="text-xs text-muted-foreground">Explain what you offer, your process, and what the client will receive.</p>
               </div>
+
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                  <div className="space-y-2">
@@ -220,6 +245,7 @@ export default function CreateServicePage() {
                      placeholder="e.g., 3"
                      required
                      min="1"
+                     step="1"
                      value={deliveryTime}
                      onChange={(e) => setDeliveryTime(e.target.value)}
                      disabled={isLoading}
@@ -233,6 +259,7 @@ export default function CreateServicePage() {
                        type="number"
                        placeholder="e.g., 2 (optional)"
                        min="0"
+                       step="1"
                        value={revisions}
                        onChange={(e) => setRevisions(e.target.value)}
                        disabled={isLoading}
@@ -240,6 +267,7 @@ export default function CreateServicePage() {
                      />
                   </div>
               </div>
+
 
               <div className="space-y-2">
                 <Label htmlFor="image">Service Image</Label>
@@ -254,7 +282,7 @@ export default function CreateServicePage() {
                                 data-ai-hint="upload preview"
                             />
                          ) : (
-                           <Upload className="h-8 w-8 text-muted-foreground" />
+                           <ImageIcon className="h-8 w-8 text-muted-foreground" />
                          )}
                     </div>
                     <Input
@@ -274,6 +302,7 @@ export default function CreateServicePage() {
                 <p className="text-xs text-muted-foreground">Upload a high-quality image (JPG, PNG, WEBP, max 5MB). Recommended size: 800x600px.</p>
               </div>
 
+
               <div className="flex justify-end pt-4">
                  <Button type="submit" className="bg-accent text-accent-foreground hover:bg-accent/90 rounded-full shadow-md hover:shadow-lg transition-shadow" disabled={isLoading}>
                    {isLoading ? (
@@ -292,3 +321,5 @@ export default function CreateServicePage() {
     </div>
   );
 }
+
+
